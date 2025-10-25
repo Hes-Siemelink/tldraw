@@ -13,5 +13,10 @@ export default defineConfig(() => {
 				/* EXCLUDE_FROM_TEMPLATE_EXPORT_END */
 			),
 		],
+		server: {
+			host: '0.0.0.0', // Bind to all interfaces
+			port: 5173,
+			cors: true, // Enable CORS for external access
+		},
 	}
 })

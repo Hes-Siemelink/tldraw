@@ -1,6 +1,14 @@
 import { handleUnfurlRequest } from 'cloudflare-workers-unfurl'
 import { AutoRouter, error, IRequest } from 'itty-router'
 import { handleAssetDownload, handleAssetUpload } from './assetUploads'
+import { 
+	handleListShapes, 
+	handleGetShape, 
+	handleCreateShape, 
+	handleUpdateShape, 
+	handleDeleteShape,
+	handleGetRoom 
+} from './shapesApi'
 
 // make sure our sync durable object is made available to cloudflare
 export { TldrawDurableObject } from './TldrawDurableObject'
@@ -28,6 +36,15 @@ const router = AutoRouter<IRequest, [env: Env, ctx: ExecutionContext]>({
 
 	// bookmarks need to extract metadata from pasted URLs:
 	.get('/api/unfurl', handleUnfurlRequest)
+
+	// Shapes API endpoints
+	.get('/api/rooms/:roomId', handleGetRoom)
+	.get('/api/rooms/:roomId/shapes', handleListShapes)
+	.post('/api/rooms/:roomId/shapes', handleCreateShape)
+	.get('/api/rooms/:roomId/shapes/:shapeId', handleGetShape)
+	.put('/api/rooms/:roomId/shapes/:shapeId', handleUpdateShape)
+	.delete('/api/rooms/:roomId/shapes/:shapeId', handleDeleteShape)
+	
 	.all('*', () => {
 		return new Response('Not found', { status: 404 })
 	})
