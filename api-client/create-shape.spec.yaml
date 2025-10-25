@@ -1,0 +1,19 @@
+Input parameters:
+  room:
+    default: my-room
+
+Connect to: TLDraw
+
+GET: /${room}/shapes
+POST: 
+  path: /${room}/shapes
+  body: 
+    x: 120
+    y: 250
+    width: 180
+    height: 100
+    color: red
+    text: API add
+
+On error:
+  Print: ${error}

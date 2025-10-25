@@ -54,6 +54,75 @@ export class TldrawDurableObject {
 			}
 			return this.handleConnect(request)
 		})
+		// Internal API for getting room snapshot (for shapes API)
+		.get('/api/room-snapshot/:roomId', async (request) => {
+			if (!this.roomId) {
+				await this.ctx.blockConcurrencyWhile(async () => {
+					await this.ctx.storage.put('roomId', request.params.roomId)
+					this.roomId = request.params.roomId
+				})
+			}
+			
+			const room = await this.getRoom()
+			const records: Record<string, TLRecord> = {}
+			await room.updateStore((store) => {
+				for (const record of store.getAll()) {
+					records[record.id] = record
+				}
+			})
+			
+			return Response.json({ 
+				success: true, 
+				roomId: this.roomId,
+				records
+			})
+		})
+		// Internal API for getting room snapshot (for shapes API)
+		.get('/api/snapshot/:roomId', async (request) => {
+			if (!this.roomId) {
+				await this.ctx.blockConcurrencyWhile(async () => {
+					await this.ctx.storage.put('roomId', request.params.roomId)
+					this.roomId = request.params.roomId
+				})
+			}
+			
+			const room = await this.getRoom()
+			const snapshot = room.getCurrentSnapshot()
+			
+			return Response.json({ snapshot })
+		})
+		
+		// Internal API for applying changes to the room (for shapes API)
+		.post('/api/room-changes/:roomId', async (request) => {
+			if (!this.roomId) {
+				await this.ctx.blockConcurrencyWhile(async () => {
+					await this.ctx.storage.put('roomId', request.params.roomId)
+					this.roomId = request.params.roomId
+				})
+			}
+			
+			const room = await this.getRoom()
+			const { changes } = await request.json()
+			
+			try {
+				// Use the TLSocketRoom's updateStore method to apply changes properly
+				await room.updateStore((store) => {
+					for (const change of changes) {
+						if (change.type === 'create' || change.type === 'update') {
+							store.put(change.record)
+						} else if (change.type === 'delete') {
+							store.delete(change.recordId)
+						}
+					}
+				})
+				
+				return Response.json({ success: true })
+			} catch (error) {
+				console.error('Failed to apply changes:', error)
+				return Response.json({ error: 'Failed to apply changes', message: error instanceof Error ? error.message : String(error) }, { status: 500 })
+			}
+		})
+
 
 	// `fetch` is the entry point for all requests to the Durable Object
 	fetch(request: Request): Response | Promise<Response> {
