@@ -103,7 +103,7 @@ export class TldrawDurableObject {
 			
 			const room = await this.getRoom()
 			const { changes } = await request.json()
-			
+
 			try {
 				// Use the TLSocketRoom's updateStore method to apply changes properly
 				await room.updateStore((store) => {
@@ -115,8 +115,8 @@ export class TldrawDurableObject {
 						}
 					}
 				})
-				
-				return Response.json({ success: true })
+
+				return Response.json({ success: true, sessions: room.getNumActiveSessions() })
 			} catch (error) {
 				console.error('Failed to apply changes:', error)
 				return Response.json({ error: 'Failed to apply changes', message: error instanceof Error ? error.message : String(error) }, { status: 500 })
