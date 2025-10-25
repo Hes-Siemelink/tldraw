@@ -1,88 +1,113 @@
 import { IRequest } from 'itty-router'
 
-// Mock shape data for now
-const mockShapes = [
-	{
-		id: 'shape:abc123',
-		type: 'geo',
-		x: 100,
-		y: 100,
-		rotation: 0,
-		props: {
-			geo: 'rectangle',
-			w: 200,
-			h: 100,
-			text: 'Hello World'
+// For now, let's use a simpler approach with mock data that persists in memory
+// We can enhance this later to integrate with the real store
+const roomShapes = new Map<string, any[]>()
+
+// Initialize with some default shapes for testing
+function getDefaultShapes() {
+	return [
+		{
+			id: 'shape:default1',
+			type: 'geo',
+			x: 100,
+			y: 100,
+			rotation: 0,
+			props: {
+				geo: 'rectangle',
+				w: 200,
+				h: 100,
+				text: 'Default Rectangle'
+			}
+		},
+		{
+			id: 'shape:default2',
+			type: 'geo',
+			x: 300,
+			y: 200,
+			rotation: 0,
+			props: {
+				geo: 'ellipse',
+				w: 150,
+				h: 150,
+				text: 'Default Circle'
+			}
 		}
-	},
-	{
-		id: 'shape:def456',
-		type: 'geo',
-		x: 300,
-		y: 200,
-		rotation: 0,
-		props: {
-			geo: 'ellipse',
-			w: 150,
-			h: 150,
-			text: 'Circle'
-		}
-	},
-	{
-		id: 'shape:ghi789',
-		type: 'text',
-		x: 50,
-		y: 50,
-		rotation: 0,
-		props: {
-			text: 'Sample Text',
-			w: 100,
-			h: 30
-		}
+	]
+}
+
+// Get shapes for a room (creates default if none exist)
+function getRoomShapes(roomId: string) {
+	if (!roomShapes.has(roomId)) {
+		roomShapes.set(roomId, getDefaultShapes())
 	}
-]
+	return roomShapes.get(roomId)!
+}
+
+// Set shapes for a room
+function setRoomShapes(roomId: string, shapes: any[]) {
+	roomShapes.set(roomId, shapes)
+}
 
 // List shapes in a room
 export async function handleListShapes(request: IRequest, env: Env): Promise<Response> {
-	const roomId = request.params.roomId
-	const url = new URL(request.url)
-	const type = url.searchParams.get('type')
-	
-	let shapes = mockShapes
-	if (type) {
-		shapes = shapes.filter(shape => shape.type === type)
+	try {
+		const roomId = request.params.roomId
+		const url = new URL(request.url)
+		const type = url.searchParams.get('type')
+		
+		let shapes = getRoomShapes(roomId)
+		
+		if (type) {
+			shapes = shapes.filter(shape => shape.type === type)
+		}
+		
+		return Response.json({
+			shapes,
+			total: shapes.length,
+			roomId
+		})
+	} catch (error) {
+		console.error('Error listing shapes:', error)
+		return Response.json(
+			{ error: 'Failed to list shapes', code: 'INTERNAL_ERROR' },
+			{ status: 500 }
+		)
 	}
-	
-	return Response.json({
-		shapes,
-		total: shapes.length,
-		roomId
-	})
 }
 
 // Get a specific shape
 export async function handleGetShape(request: IRequest, env: Env): Promise<Response> {
-	const { roomId, shapeId } = request.params
-	const shape = mockShapes.find(s => s.id === shapeId)
-	
-	if (!shape) {
+	try {
+		const { roomId, shapeId } = request.params
+		
+		const shapes = getRoomShapes(roomId)
+		const shape = shapes.find(s => s.id === shapeId)
+		
+		if (!shape) {
+			return Response.json(
+				{ error: 'Shape not found', code: 'SHAPE_NOT_FOUND' },
+				{ status: 404 }
+			)
+		}
+		
+		return Response.json(shape)
+	} catch (error) {
+		console.error('Error getting shape:', error)
 		return Response.json(
-			{ error: 'Shape not found', code: 'SHAPE_NOT_FOUND' },
-			{ status: 404 }
+			{ error: 'Failed to get shape', code: 'INTERNAL_ERROR' },
+			{ status: 500 }
 		)
 	}
-	
-	return Response.json(shape)
 }
 
 // Create a new shape
 export async function handleCreateShape(request: IRequest, env: Env): Promise<Response> {
-	const roomId = request.params.roomId
-	
 	try {
+		const roomId = request.params.roomId
 		const body = await request.json()
 		
-		// Generate a mock ID
+		// Generate a unique ID
 		const newId = `shape:${Math.random().toString(36).substr(2, 9)}`
 		
 		const newShape = {
@@ -94,13 +119,17 @@ export async function handleCreateShape(request: IRequest, env: Env): Promise<Re
 			props: body.props || {}
 		}
 		
-		// In real implementation, this would save to the durable object
-		// For now, just return the created shape
+		// Add to room shapes
+		const shapes = getRoomShapes(roomId)
+		shapes.push(newShape)
+		setRoomShapes(roomId, shapes)
+		
 		return Response.json(newShape, { status: 201 })
 		
 	} catch (error) {
+		console.error('Error creating shape:', error)
 		return Response.json(
-			{ error: 'Invalid JSON body', code: 'VALIDATION_ERROR' },
+			{ error: 'Failed to create shape', code: 'VALIDATION_ERROR' },
 			{ status: 400 }
 		)
 	}
@@ -108,64 +137,93 @@ export async function handleCreateShape(request: IRequest, env: Env): Promise<Re
 
 // Update an existing shape
 export async function handleUpdateShape(request: IRequest, env: Env): Promise<Response> {
-	const { roomId, shapeId } = request.params
-	const shape = mockShapes.find(s => s.id === shapeId)
-	
-	if (!shape) {
-		return Response.json(
-			{ error: 'Shape not found', code: 'SHAPE_NOT_FOUND' },
-			{ status: 404 }
-		)
-	}
-	
 	try {
+		const { roomId, shapeId } = request.params
+		
+		const shapes = getRoomShapes(roomId)
+		const shapeIndex = shapes.findIndex(s => s.id === shapeId)
+		
+		if (shapeIndex === -1) {
+			return Response.json(
+				{ error: 'Shape not found', code: 'SHAPE_NOT_FOUND' },
+				{ status: 404 }
+			)
+		}
+		
 		const updates = await request.json()
 		
 		// Merge updates with existing shape
 		const updatedShape = {
-			...shape,
+			...shapes[shapeIndex],
 			...updates,
-			props: { ...shape.props, ...updates.props }
+			props: { ...shapes[shapeIndex].props, ...(updates.props || {}) }
 		}
 		
-		// In real implementation, this would update the durable object
+		// Update the shape in place
+		shapes[shapeIndex] = updatedShape
+		setRoomShapes(roomId, shapes)
+		
 		return Response.json(updatedShape)
 		
 	} catch (error) {
+		console.error('Error updating shape:', error)
 		return Response.json(
-			{ error: 'Invalid JSON body', code: 'VALIDATION_ERROR' },
-			{ status: 400 }
+			{ error: 'Failed to update shape', code: 'INTERNAL_ERROR' },
+			{ status: 500 }
 		)
 	}
 }
 
 // Delete a shape
 export async function handleDeleteShape(request: IRequest, env: Env): Promise<Response> {
-	const { roomId, shapeId } = request.params
-	const shape = mockShapes.find(s => s.id === shapeId)
-	
-	if (!shape) {
+	try {
+		const { roomId, shapeId } = request.params
+		
+		const shapes = getRoomShapes(roomId)
+		const shapeIndex = shapes.findIndex(s => s.id === shapeId)
+		
+		if (shapeIndex === -1) {
+			return Response.json(
+				{ error: 'Shape not found', code: 'SHAPE_NOT_FOUND' },
+				{ status: 404 }
+			)
+		}
+		
+		// Remove the shape from the array
+		shapes.splice(shapeIndex, 1)
+		setRoomShapes(roomId, shapes)
+		
+		return Response.json({
+			deleted: true,
+			id: shapeId
+		})
+		
+	} catch (error) {
+		console.error('Error deleting shape:', error)
 		return Response.json(
-			{ error: 'Shape not found', code: 'SHAPE_NOT_FOUND' },
-			{ status: 404 }
+			{ error: 'Failed to delete shape', code: 'INTERNAL_ERROR' },
+			{ status: 500 }
 		)
 	}
-	
-	// In real implementation, this would delete from the durable object
-	return Response.json({
-		deleted: true,
-		id: shapeId
-	})
 }
 
 // Get room info
 export async function handleGetRoom(request: IRequest, env: Env): Promise<Response> {
-	const roomId = request.params.roomId
-	
-	return Response.json({
-		id: roomId,
-		name: `Room ${roomId}`,
-		shapeCount: mockShapes.length,
-		created: '2025-10-25T10:00:00Z'
-	})
+	try {
+		const roomId = request.params.roomId
+		const shapes = getRoomShapes(roomId)
+		
+		return Response.json({
+			id: roomId,
+			name: `Room ${roomId}`,
+			shapeCount: shapes.length,
+			created: '2025-10-25T10:00:00Z'
+		})
+	} catch (error) {
+		console.error('Error getting room:', error)
+		return Response.json(
+			{ error: 'Failed to get room', code: 'INTERNAL_ERROR' },
+			{ status: 500 }
+		)
+	}
 }

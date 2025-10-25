@@ -1,11 +1,7 @@
-# Http request defaults:
-#   url: http://localhost:5173/api/rooms/my-room
+Input parameters:
+  room:
+    default: my-room
 
-GET: "http://localhost:5173/api/rooms/my-room/shapes"
+Connect to: TLDraw
 
-# Alternative URLs to try if localhost doesn't work from Kotlin:
-# GET: "http://127.0.0.1:5173/api/rooms/my-room/shapes"
-# GET: "http://0.0.0.0:5173/api/rooms/my-room/shapes"
-
-# ---
-# GET: https://api.weather.gov/alerts/active/area/CA
+GET: /${room}/shapes

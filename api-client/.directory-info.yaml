@@ -1,0 +1,8 @@
+Script info: TLDraw API Client
+
+connections:
+  TLDraw:
+    Http request defaults:
+      url: http://localhost:5173/api/rooms
+
+
