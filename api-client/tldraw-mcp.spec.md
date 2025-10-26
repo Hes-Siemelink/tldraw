@@ -30,7 +30,9 @@ Mcp tool:
       properties:
         room:
           type: string
-          description: The name of the 'room' or canvas that we are in. For example 'mcp-room' or 'project-whiteboard'
+          description: |
+            The name of the 'room' or canvas that we are in.
+            For example 'mcp-room' or 'project-whiteboard'
           default: mcp-room
     script: list-shapes.spec.yaml
 ```
@@ -48,19 +50,27 @@ Mcp tool:
       properties:
         room:
           type: string
-          description: The name of the 'room' or canvas that we are in. For example 'mcp-room' or 'project-whiteboard'
+          description: |
+            The name of the 'room' or canvas that we are in.
+            For example 'mcp-room' or 'project-whiteboard'
           default: mcp-room
         text:
-            type: string
-            description: The text to put on the sticky note. Just plain text, no formatting
+          type: string
+          description: |
+            The text to put on the sticky note. 
+            Just plain text, no formatting
         x:
-            type: number
-            description: The x coordinate on where to place the note on the canvas. Typically between 0 and 1000
+          type: number
+          description: |
+            The x coordinate on where to place the note on the canvas. 
+            Typically between 0 and 1000
         y:
-            type: number
-            description: The y coordinate on where to place the note on the canvas. Typically between 0 and 1000
-        
-      required: [ text ]
+          type: number
+          description: |
+            The y coordinate on where to place the note on the canvas. 
+            Typically between 0 and 1000
+
+      required: [text]
     script: create-note.spec.yaml
 
 ```

@@ -8,7 +8,6 @@ Input parameters:
 
 Connect to: TLDraw
 
-GET: /${room}/shapes
 POST: 
   path: /${room}/shapes
   body: 
