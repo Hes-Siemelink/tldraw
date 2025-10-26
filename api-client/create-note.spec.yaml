@@ -1,10 +1,12 @@
 Input parameters:
   room:
     default: my-room
-  parentId:
-    default: null
   text:
-    default: New shape
+    default: ""
+  x:
+    default: 120
+  y:
+    default: 250
 
 Connect to: TLDraw
 
@@ -12,13 +14,10 @@ GET: /${room}/shapes
 POST: 
   path: /${room}/shapes
   body: 
-    x: 120
-    y: 250
-    width: 180
-    height: 100
-    color: red
+    x: ${x}
+    y: ${y}
+    type: note    
     text: ${text}
-    parentId: ${parentId}
 
 On error:
   Print: ${error}
